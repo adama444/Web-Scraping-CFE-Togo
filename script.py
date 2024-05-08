@@ -3,8 +3,13 @@ from bs4 import BeautifulSoup
 import re
 import csv
 
-url = 'https://cfetogo.tg/annonces-legales/details-annonce-86.html'
+url = 'https://cfetogo.tg/annonces-legales/details-annonce-2218.html'
 response = requests.get(url)
+
+if response.status_code != 200:
+    print('Not Found')
+    exit()
+
 soup = BeautifulSoup(response.content, 'html.parser')
 main_page = soup.find_all('div', {'class': 'col-md-12'})[1]
 
@@ -33,7 +38,10 @@ if company.get('denomination'):
 else:
     company['name'] = '-'
 
-company["capital"] = re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()).group().replace(' ', '').replace('.', '')
+if re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()) != None:
+    company["capital"] = re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()).group().replace(' ', '').replace('.', '')
+else:
+    company['capital'] = 'moins de 1.000.000'
 
 if company.get('geranc') and re.search(manager_pattern, company['geranc']) != None:
     company['manager'] = re.search(manager_pattern, company['geranc']).group().upper()
