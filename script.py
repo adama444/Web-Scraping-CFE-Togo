@@ -3,32 +3,45 @@ from bs4 import BeautifulSoup
 import re
 import csv
 
-url = 'https://cfetogo.tg/annonces-legales/details-annonce-2.html'
+url = 'https://cfetogo.tg/annonces-legales/details-annonce-33.html'
 response = requests.get(url)
 soup = BeautifulSoup(response.content, 'html.parser')
-main_page = soup.find('div', {'class': 'main'})
+main_page = soup.find_all('div', {'class': 'col-md-12'})[1]
 
 company = {}
 
-sector = {'is_import_export': r'import[ ]*-[ ]*export', 'is_transport': 'transport', 'is_real_estate': 'immobilier', 'is_agrobusiness': 'agrobusiness', 'is_restoration': 'restauration', 'is_investment': 'investissement', 'is_general_commerce': r'commerce g.n.ral', 'is_BTP': r'travaux [a-z]+ b.timent'}
+sector = {'is_import_export': r'import[ ]*-[ ]*export', 'is_transport': 'transport', 'is_real_estate': 'immobili.r', 'is_agrobusiness': 'agrobusiness', 'is_restoration': 'restauration', 'is_investment': 'investissement', 'is_general_commerce': r'commerce g.n.ral', 'is_BTP': r'b.timent|travaux public'}
 
 email_pattern = r'[a-zA-Z0-9]+[-._]*[a-zA-Z0-9]+@[a-zA-Z0-9-]+\.[a-z]{2,}'
 phone_number_pattern = r'([0-9]{8,13})|(\d{2} \d{2} \d{2} \d{2})'
-manager_pattern = re.compile(r'\b(mademoiselle|monsieur)\b [a-zA-Z]+( [a-zA-Z]+)*', re.IGNORECASE)
+manager_pattern = re.compile(r'\b(mademoiselle|monsieur|madame)\b [a-zA-Z]+( [a-zA-Z]+)*', re.IGNORECASE)
 
 p_list = main_page.find_all('p')
-for p in p_list:
-    for expr in [r'\Adenomination', r'\Asiege social', r'\Ageranc']:
-        res = re.search(expr, p.get_text().lower())
-        if res != None:
-            company[expr[2:]] = res.string.split(':')[1]
-            continue
+if p_list:
+    for p in p_list:
+        for expr in [r'\Adenomination', r'\Asiege social', r'\Ageranc', r'\Aadministration']:
+            res = re.search(expr, p.get_text().lower())
+            if res != None:
+                company[expr[2:]] = res.string.split(':')[1]
+                continue
+else:
+    print('Bad page HTML format')
+    exit()
 
-company["name"] = str(company["denomination"]).replace('«', '').replace('»', '').strip()
+if company.get('denomination'):
+    company["name"] = str(company["denomination"]).replace('«', '').replace('»', '').strip()
+else:
+    company['name'] = '-'
 
-company["capital"] = re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.getText()).group().replace(' ', '').replace('.', '')
+company["capital"] = re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()).group().replace(' ', '').replace('.', '')
 
-company['manager'] = re.search(manager_pattern, company['geranc']).group().upper()
+if company.get('geranc'):
+    company['manager'] = re.search(manager_pattern, company['geranc']).group().upper()
+else:
+    if company.get('administration'):
+        company['manager'] = re.search(manager_pattern, company['administration']).group().upper()
+    else:
+        company['manager'] = '-'
 
 if re.search('[lom]|[togo]', company['siege social']) != None:
     company["is_national"] = True
@@ -59,13 +72,18 @@ for (k,v) in sector.items():
     else:
         company[k] = False
 
-company.pop('denomination')
+if company.get('denomination'):
+    company.pop('denomination')
 company.pop('siege social')
-company.pop('geranc')
+if company.get('geranc'):
+    company.pop('geranc')
+else:
+    if company.get('administration'):
+        company.pop('administration')
 for (k,v) in company.items():
     print(k, '->', v)
 
-with open("company.csv", "w") as csvfile:
+with open("./company.csv", "w") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=company.keys())
     writer.writeheader()
     writer.writerows([company])
