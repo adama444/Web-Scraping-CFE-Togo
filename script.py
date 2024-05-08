@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import csv
 
-url = 'https://cfetogo.tg/annonces-legales/details-annonce-33.html'
+url = 'https://cfetogo.tg/annonces-legales/details-annonce-86.html'
 response = requests.get(url)
 soup = BeautifulSoup(response.content, 'html.parser')
 main_page = soup.find_all('div', {'class': 'col-md-12'})[1]
@@ -21,7 +21,7 @@ if p_list:
     for p in p_list:
         for expr in [r'\Adenomination', r'\Asiege social', r'\Ageranc', r'\Aadministration']:
             res = re.search(expr, p.get_text().lower())
-            if res != None:
+            if res != None and res.string.find(':') != -1:
                 company[expr[2:]] = res.string.split(':')[1]
                 continue
 else:
@@ -35,18 +35,20 @@ else:
 
 company["capital"] = re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()).group().replace(' ', '').replace('.', '')
 
-if company.get('geranc'):
+if company.get('geranc') and re.search(manager_pattern, company['geranc']) != None:
     company['manager'] = re.search(manager_pattern, company['geranc']).group().upper()
 else:
-    if company.get('administration'):
+    if company.get('administration') and re.search(manager_pattern, company['administration']) != None:
         company['manager'] = re.search(manager_pattern, company['administration']).group().upper()
     else:
         company['manager'] = '-'
-
-if re.search('[lom]|[togo]', company['siege social']) != None:
-    company["is_national"] = True
+if company.get('siege social'):
+    if re.search('[lom]|[togo]', company['siege social']) != None:
+        company["is_national"] = True
+    else:
+        company["is_national"] = False
 else:
-    company["is_national"] = False
+    company['is_national'] = True
 
 phone_numbers = re.findall(phone_number_pattern, main_page.get_text())
 formatted_numbers = set()
@@ -74,7 +76,8 @@ for (k,v) in sector.items():
 
 if company.get('denomination'):
     company.pop('denomination')
-company.pop('siege social')
+if company.get('siege social'):
+    company.pop('siege social')
 if company.get('geranc'):
     company.pop('geranc')
 else:
