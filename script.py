@@ -20,7 +20,8 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
 
     email_pattern = r'[a-zA-Z0-9]+[-._]*[a-zA-Z0-9]+@[a-zA-Z0-9-]+\.[a-z]{2,}'
     phone_number_pattern = r'([0-9]{8,13})|(\d{2} \d{2} \d{2} \d{2})'
-    manager_pattern = re.compile(r'\b(mademoiselle|monsieur|madame)\b [a-zA-Zï]+([ ]*-*[a-zA-Zï]+){,2}', re.IGNORECASE)
+    manager_pattern = re.compile(r'\b(mademoiselle|monsieur|madame)\b \w+([ ]*-*\w+){,2}', re.IGNORECASE)
+    capital_pattern = r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}'
 
     p_list = main_page.find_all('p')
     if p_list:
@@ -39,8 +40,8 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
     else:
         company['name'] = '-'
 
-    if re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()) != None:
-        company["capital"] = re.search(r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}', main_page.get_text()).group().replace(' ', '').replace('.', '')
+    if re.search(capital_pattern, main_page.get_text()) != None:
+        company["capital"] = re.search(capital_pattern, main_page.get_text()).group().replace(' ', '').replace('.', '')
     else:
         company['capital'] = 'moins de 1.000.000'
 
@@ -94,6 +95,7 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
     else:
         if 'administration' in company:
             company.pop('administration')
+
 for (k,v) in company.items():
     print(k, '->', v)
 
