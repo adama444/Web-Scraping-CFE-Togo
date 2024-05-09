@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import csv
 
-url = 'https://cfetogo.tg/annonces-legales/details-annonce-228.html'
+url = 'https://cfetogo.tg/annonces-legales/details-annonce-152.html'
 response = requests.get(url)
 
 if response.status_code != 200:
@@ -20,7 +20,7 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
 
     email_pattern = r'[a-zA-Z0-9]+[-._]*[a-zA-Z0-9]+@[a-zA-Z0-9-]+\.[a-z]{2,}'
     phone_number_pattern = r'([0-9]{8,13})|(\d{2} \d{2} \d{2} \d{2})'
-    manager_pattern = re.compile(r'\b(mademoiselle|monsieur|madame)\b [a-zA-Z]+( [a-zA-Z]+)*', re.IGNORECASE)
+    manager_pattern = re.compile(r'\b(mademoiselle|monsieur|madame)\b [a-zA-Zï]+([ ]*-*[a-zA-Zï]+){,2}', re.IGNORECASE)
 
     p_list = main_page.find_all('p')
     if p_list:
@@ -28,14 +28,14 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
             for expr in [r'\Adenomination', r'\Asiege social', r'\Ageranc', r'\Aadministration']:
                 res = re.search(expr, p.get_text().lower())
                 if res != None and res.string.find(':') != -1:
-                    company[expr[2:]] = res.string.split(':')[1]
+                    company[expr[2:]] = res.string.split(':')[1].strip()
                     continue
     else:
         print('Bad page HTML format')
         exit()
-
-    if company.get('denomination'):
-        company["name"] = str(company["denomination"]).replace('«', '').replace('»', '').strip()
+    
+    if 'denomination' in company:
+        company["name"] = str(company["denomination"]).replace('«', '').replace('»', '')
     else:
         company['name'] = '-'
 
@@ -44,14 +44,14 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
     else:
         company['capital'] = 'moins de 1.000.000'
 
-    if company.get('geranc') and re.search(manager_pattern, company['geranc']) != None:
+    if 'geranc' in company and re.search(manager_pattern, company['geranc']) != None:
         company['manager'] = re.search(manager_pattern, company['geranc']).group().upper()
     else:
-        if company.get('administration') and re.search(manager_pattern, company['administration']) != None:
+        if 'administration' in company and re.search(manager_pattern, company['administration']) != None:
             company['manager'] = re.search(manager_pattern, company['administration']).group().upper()
         else:
             company['manager'] = '-'
-    if company.get('siege social'):
+    if 'siege social' in company:
         if re.search('[lom]|[togo]', company['siege social']) != None:
             company["is_national"] = True
         else:
@@ -83,19 +83,21 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
         else:
             company[k] = False
 
-    if company.get('denomination'):
+    if 'denomination' in company:
         company.pop('denomination')
-    if company.get('siege social'):
+
+    if 'siege social' in company:
         company.pop('siege social')
-    if company.get('geranc'):
+
+    if 'geranc' in company:
         company.pop('geranc')
     else:
-        if company.get('administration'):
+        if 'administration' in company:
             company.pop('administration')
 for (k,v) in company.items():
     print(k, '->', v)
 
-with open("./company.csv", "w") as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=company.keys())
-    writer.writeheader()
-    writer.writerows([company])
+#with open("./company.csv", "w") as csvfile:
+#    writer = csv.DictWriter(csvfile, fieldnames=company.keys())
+#    writer.writeheader()
+#    writer.writerows([company])
