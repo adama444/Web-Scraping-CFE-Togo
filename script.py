@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import csv
 
-url = 'https://cfetogo.tg/annonces-legales/details-annonce-152.html'
+url = 'https://cfetogo.tg/annonces-legales/details-annonce-10552.html'
 response = requests.get(url)
 
 if response.status_code != 200:
@@ -21,7 +21,7 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
     email_pattern = r'[a-zA-Z0-9]+[-._]*[a-zA-Z0-9]+@[a-zA-Z0-9-]+\.[a-z]{2,}'
     phone_number_pattern = r'([0-9]{8,13})|(\d{2} \d{2} \d{2} \d{2})'
     manager_pattern = re.compile(r'\b(mademoiselle|monsieur|madame)\b \w+([ ]*-*\w+){,2}', re.IGNORECASE)
-    capital_pattern = r'\d+[.]*[ ]*\d{3}[.]*[ ]*\d{3}'
+    capital_pattern = r'\d{0,3}[.| ]?\d00[.| ]?000'
 
     p_list = main_page.find_all('p')
     if p_list:
@@ -40,8 +40,9 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
     else:
         company['name'] = '-'
 
-    if re.search(capital_pattern, main_page.get_text()) != None:
-        company["capital"] = re.search(capital_pattern, main_page.get_text()).group().replace(' ', '').replace('.', '')
+    capital = re.search(capital_pattern, main_page.get_text())
+    if capital != None and int(capital.group().replace(' ', '').replace('.', '')) >= 1000000:
+        company["capital"] = capital.group().replace(' ', '').replace('.', '')
     else:
         company['capital'] = 'moins de 1.000.000'
 
@@ -92,9 +93,9 @@ if re.search(re.compile('constitution de societe', re.IGNORECASE), main_page.get
 
     if 'geranc' in company:
         company.pop('geranc')
-    else:
-        if 'administration' in company:
-            company.pop('administration')
+
+    if 'administration' in company:
+        company.pop('administration')
 
 for (k,v) in company.items():
     print(k, '->', v)
